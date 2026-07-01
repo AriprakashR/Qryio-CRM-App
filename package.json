@@ -1,12 +1,20 @@
 {
   "name": "qryio-crm-app",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "expo-router/entry",
   "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
     "expo": "~56.0.12",
+    "expo-constants": "~56.0.18",
+    "expo-linear-gradient": "~56.0.4",
+    "expo-linking": "~56.0.14",
+    "expo-router": "~56.2.11",
     "expo-status-bar": "~56.0.4",
     "react": "19.2.3",
-    "react-native": "0.85.3"
+    "react-native": "0.85.3",
+    "react-native-paper": "^5.15.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "4.25.2"
   },
   "scripts": {
     "start": "expo start",
