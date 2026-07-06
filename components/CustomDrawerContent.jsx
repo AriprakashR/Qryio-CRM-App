@@ -1,6 +1,6 @@
 import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Text } from 'react-native-paper';
-import { ScrollView } from 'react-native';
+import { DrawerContentScrollView } from '@react-navigation/drawer';
 import { usePathname, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -18,11 +18,14 @@ export default function CustomDrawerContent(props) {
 
   return (
     <View style={styles.container}>
-      <ScrollView {...props} contentContainerStyle={{ flexGrow: 1 }}>
+      <DrawerContentScrollView
+        {...props}
+        contentContainerStyle={{ flexGrow: 1 }}
+      >
         {/* Logo */}
         <View style={styles.logoSection}>
           <Image
-            source={require('../assets/logo2.jpg')}
+            source={require('../assets/icon.png')}
             style={styles.logo}
             resizeMode='contain'
           />
@@ -56,7 +59,7 @@ export default function CustomDrawerContent(props) {
             );
           })}
         </View>
-      </ScrollView>
+      </DrawerContentScrollView>
 
       {/* Footer */}
       <View style={styles.footer}>
@@ -76,7 +79,7 @@ const styles = StyleSheet.create({
 
   // Logo
   logoSection: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 },
-  logo: { width: 58, height: 58 },
+  logo: { width: 48, height: 48 },
 
   // Divider
   divider: { height: 1, backgroundColor: '#F0F2F5', marginHorizontal: 16 },
