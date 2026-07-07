@@ -25,7 +25,7 @@ export default function CustomDrawerContent(props) {
         {/* Logo */}
         <View style={styles.logoSection}>
           <Image
-            source={require('../assets/icon.png')}
+            source={require('../assets/logo2.jpg')}
             style={styles.logo}
             resizeMode='contain'
           />
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
 
   // Logo
   logoSection: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 },
-  logo: { width: 48, height: 48 },
+  logo: { width: 58, height: 58 },
 
   // Divider
   divider: { height: 1, backgroundColor: '#F0F2F5', marginHorizontal: 16 },

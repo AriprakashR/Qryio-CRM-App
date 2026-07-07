@@ -12,10 +12,17 @@ import { TextInput, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { sendOtp, verifyOtp, getUserProfile } from '../api/authService';
+import { setLoginTime } from '../api/axiosInstance';
+import { useUser } from '../context/UserContext';
 
 export default function Login() {
   const router = useRouter();
-  const [step, setStep] = useState('email'); // 'email' | 'otp'
+  const { setUser } = useUser();
+
+  const [step, setStep] = useState('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [showOtp, setShowOtp] = useState(false);
@@ -30,9 +37,16 @@ export default function Login() {
     }
     setLoading(true);
     setError('');
-    await new Promise(r => setTimeout(r, 1000)); // Simulate API
-    setLoading(false);
-    setStep('otp');
+    try {
+      await sendOtp(email);
+      setStep('otp');
+    } catch (err) {
+      const message =
+        err.response?.data?.detail || 'Failed to send OTP. Please try again.';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   }, [email]);
 
   // ── Step 2: Verify OTP ───────────────────────────────────────────
@@ -43,23 +57,42 @@ export default function Login() {
     }
     setLoading(true);
     setError('');
-    await new Promise(r => setTimeout(r, 1000)); // Simulate API
-    if (otp === '123456') {
-      setLoading(false);
-      router.replace('/dashboard');
-    } else {
-      setLoading(false);
-      setError('Invalid OTP. Use 123456 for testing.');
-    }
-  }, [otp, router]);
+    try {
+      const verifyResponse = await verifyOtp(email, otp);
+      const { token } = verifyResponse.data.data;
 
-  // ── Back to email ────────────────────────────────────────────────
+      const profileResponse = await getUserProfile(token);
+      const profile = profileResponse.data.data;
+
+      // Persist session — same order as web
+      await AsyncStorage.setItem('token', token);
+      await AsyncStorage.setItem('qryio_user', JSON.stringify(profile));
+      await setLoginTime();
+
+      await setUser(profile);
+      router.replace('/dashboard');
+    } catch (err) {
+      const message =
+        err.response?.data?.detail || 'Login failed. Please try again.';
+      setError(message);
+      await AsyncStorage.multiRemove([
+        'token',
+        'qryio_user',
+        'qryio_login_time',
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }, [email, otp, setUser, router]);
+
+  // ── Back ─────────────────────────────────────────────────────────
   const handleBack = useCallback(() => {
     setStep('email');
     setOtp('');
     setError('');
   }, []);
 
+  // ── UI (keep exactly as before) ──────────────────────────────────
   return (
     <LinearGradient
       colors={['#D9E3EE', '#F5F5F5', '#EDD9CE']}
@@ -71,7 +104,6 @@ export default function Login() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* ── Header ── */}
         <View style={styles.header}>
           <Image
             source={require('../assets/logo2.jpg')}
@@ -83,10 +115,8 @@ export default function Login() {
           </TouchableOpacity>
         </View>
 
-        {/* ── Card ── */}
         <View style={styles.cardWrapper}>
           <View style={styles.card}>
-            {/* Title block */}
             <View style={styles.titleSection}>
               <Text style={styles.title}>Log in</Text>
               <Text style={styles.subtitle}>
@@ -94,14 +124,12 @@ export default function Login() {
               </Text>
             </View>
 
-            {/* Step indicator */}
             <Text style={styles.stepText}>
               {step === 'email'
                 ? 'Step 1 of 2 — Enter your email'
                 : 'Step 2 of 2 — Verify OTP'}
             </Text>
 
-            {/* ── Email Step ── */}
             {step === 'email' && (
               <>
                 <TextInput
@@ -121,7 +149,6 @@ export default function Login() {
                   disabled={loading}
                 />
                 {!!error && <Text style={styles.errorText}>{error}</Text>}
-
                 <TouchableOpacity
                   style={[styles.darkButton, loading && styles.buttonDisabled]}
                   onPress={handleSendOtp}
@@ -144,13 +171,11 @@ export default function Login() {
               </>
             )}
 
-            {/* ── OTP Step ── */}
             {step === 'otp' && (
               <>
                 <Text style={styles.otpSentText}>
                   OTP sent to <Text style={styles.emailBold}>{email}</Text>
                 </Text>
-
                 <TextInput
                   label='One-Time Password'
                   mode='outlined'
@@ -169,13 +194,18 @@ export default function Login() {
                   disabled={loading}
                   right={
                     <TextInput.Icon
-                      icon={showOtp ? 'eye-off' : 'eye'}
+                      icon={() => (
+                        <MaterialCommunityIcons
+                          name={showOtp ? 'eye-off' : 'eye'}
+                          size={22}
+                          color='#637381'
+                        />
+                      )}
                       onPress={() => setShowOtp(v => !v)}
                     />
                   }
                 />
                 {!!error && <Text style={styles.errorText}>{error}</Text>}
-
                 <TouchableOpacity
                   style={[styles.darkButton, loading && styles.buttonDisabled]}
                   onPress={handleLogin}
@@ -188,7 +218,6 @@ export default function Login() {
                     <Text style={styles.darkButtonText}>Login</Text>
                   )}
                 </TouchableOpacity>
-
                 <TouchableOpacity
                   style={styles.backButton}
                   onPress={handleBack}
@@ -215,8 +244,6 @@ export default function Login() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   gradient: { flex: 1 },
-
-  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -227,13 +254,7 @@ const styles = StyleSheet.create({
   },
   logo: { width: 55, height: 55 },
   helpText: { fontSize: 14, color: '#1C252E', fontWeight: '500' },
-
-  // Card
-  cardWrapper: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
+  cardWrapper: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -244,40 +265,18 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 5,
   },
-
-  // Title
   titleSection: { alignItems: 'center', marginBottom: 16 },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1C252E',
-    marginBottom: 6,
-  },
+  title: { fontSize: 22, fontWeight: '700', color: '#1C252E', marginBottom: 6 },
   subtitle: {
     fontSize: 14,
     color: '#637381',
     textAlign: 'center',
     lineHeight: 20,
   },
-
-  // Step text
-  stepText: {
-    fontSize: 12,
-    color: '#919EAB',
-    marginBottom: 18,
-  },
-
-  // Input
+  stepText: { fontSize: 12, color: '#919EAB', marginBottom: 18 },
   input: { backgroundColor: '#FFFFFF', marginBottom: 2 },
   inputOutline: { borderRadius: 8, borderColor: '#DDE1E6' },
-  errorText: {
-    fontSize: 12,
-    color: '#FF4842',
-    marginTop: 4,
-    marginBottom: 6,
-  },
-
-  // Dark button
+  errorText: { fontSize: 12, color: '#FF4842', marginTop: 4, marginBottom: 6 },
   darkButton: {
     backgroundColor: '#1C252E',
     borderRadius: 10,
@@ -289,8 +288,6 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.7 },
   buttonRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   darkButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
-
-  // OTP step extras
   otpSentText: {
     fontSize: 13,
     color: '#637381',
@@ -298,8 +295,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   emailBold: { fontWeight: '700', color: '#1C252E' },
-
-  // Back button
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',

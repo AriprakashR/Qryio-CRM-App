@@ -1,16 +1,19 @@
 import { Drawer } from 'expo-router/drawer';
 import CustomDrawerContent from '../../components/CustomDrawerContent';
 import CustomHeader from '../../components/CustomHeader';
+import { SessionGuard } from '../../components/SessionGuard';
 
 export default function AppLayout() {
   return (
-    <Drawer
-      drawerContent={props => <CustomDrawerContent {...props} />}
-      screenOptions={({ navigation }) => ({
-        header: () => <CustomHeader navigation={navigation} />,
-        drawerStyle: { width: 260 },
-        swipeEnabled: true,
-      })}
-    />
+    <SessionGuard>
+      <Drawer
+        drawerContent={props => <CustomDrawerContent {...props} />}
+        screenOptions={({ navigation }) => ({
+          header: () => <CustomHeader navigation={navigation} />,
+          drawerStyle: { width: 260 },
+          swipeEnabled: true,
+        })}
+      />
+    </SessionGuard>
   );
 }
