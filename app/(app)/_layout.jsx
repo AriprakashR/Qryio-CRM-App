@@ -12,6 +12,7 @@ export default function AppLayout() {
           header: () => <CustomHeader navigation={navigation} />,
           drawerStyle: { width: 260 },
           swipeEnabled: true,
+          overlayColor: 'rgba(0,0,0,0.45)',
         })}
       />
     </SessionGuard>

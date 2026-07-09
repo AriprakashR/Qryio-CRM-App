@@ -1,6 +1,6 @@
 import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Text } from 'react-native-paper';
-import { DrawerContentScrollView } from '@react-navigation/drawer';
+import { ScrollView } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -16,16 +16,23 @@ export default function CustomDrawerContent(props) {
   const router = useRouter();
   const pathname = usePathname();
 
+  const handleNavPress = route => {
+    // Close drawer first, then navigate — prevents stuck state
+    props.navigation.closeDrawer();
+    // Small delay ensures drawer animation completes before route change
+    setTimeout(() => router.push(route), 150);
+  };
+
   return (
     <View style={styles.container}>
-      <DrawerContentScrollView
-        {...props}
+      <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
       >
         {/* Logo */}
         <View style={styles.logoSection}>
           <Image
-            source={require('../assets/logo2.jpg')}
+            source={require('../assets/icon.png')}
             style={styles.logo}
             resizeMode='contain'
           />
@@ -36,12 +43,15 @@ export default function CustomDrawerContent(props) {
         {/* Nav Items */}
         <View style={styles.navSection}>
           {NAV_ITEMS.map(item => {
-            const isActive = pathname === item.route;
+            const isActive =
+              pathname === item.route ||
+              (item.route !== '/' && pathname.startsWith(item.route));
+
             return (
               <TouchableOpacity
                 key={item.label}
                 style={[styles.navItem, isActive && styles.navItemActive]}
-                onPress={() => router.push(item.route)}
+                onPress={() => handleNavPress(item.route)}
                 activeOpacity={0.7}
               >
                 <MaterialCommunityIcons
@@ -59,7 +69,7 @@ export default function CustomDrawerContent(props) {
             );
           })}
         </View>
-      </DrawerContentScrollView>
+      </ScrollView>
 
       {/* Footer */}
       <View style={styles.footer}>
@@ -76,15 +86,9 @@ export default function CustomDrawerContent(props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-
-  // Logo
   logoSection: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 },
-  logo: { width: 58, height: 58 },
-
-  // Divider
+  logo: { width: 48, height: 48 },
   divider: { height: 1, backgroundColor: '#F0F2F5', marginHorizontal: 16 },
-
-  // Nav
   navSection: { paddingTop: 12, paddingHorizontal: 12 },
   navItem: {
     flexDirection: 'row',
@@ -98,8 +102,6 @@ const styles = StyleSheet.create({
   navIcon: { marginRight: 12 },
   navLabel: { fontSize: 14, color: '#637381', fontWeight: '400' },
   navLabelActive: { color: '#1677FF', fontWeight: '600' },
-
-  // Footer
   footer: { paddingBottom: 28 },
   footerContent: {
     paddingHorizontal: 20,
