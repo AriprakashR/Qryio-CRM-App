@@ -58,7 +58,19 @@ const STORAGE_KEY = 'qryio_user';
 const TOKEN_KEY = 'token';
 
 // ── Context ───────────────────────────────────────────────────────────
-const UserContext = createContext(null);
+// Change this line at the top
+const UserContext = createContext({
+  user: null,
+  setUser: async () => {},
+  logout: async () => {},
+  loading: true,
+  resolvedRole: null,
+  isCompanyAdmin: false,
+  isCompanyUser: false,
+  isClientAdmin: false,
+  isClientUser: false,
+  isSuperAdmin: false,
+});
 
 export function UserProvider({ children }) {
   const [user, _setUser] = useState(null);
@@ -127,6 +139,5 @@ export function UserProvider({ children }) {
 
 export function useUser() {
   const ctx = useContext(UserContext);
-  if (!ctx) throw new Error('useUser must be used inside <UserProvider>');
   return ctx;
 }
