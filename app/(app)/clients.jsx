@@ -24,7 +24,7 @@ const COL = {
   status: 90,
   createdOn: 115,
   createdBy: 110,
-  actions: 44,
+  actions: 64,
 };
 const ROWS_OPTIONS = [5, 10, 25];
 
@@ -432,9 +432,6 @@ export default function Clients() {
                       </View>
                     ))}
                   </View>
-
-                  <View style={styles.divider} />
-
                   {paginated.length === 0 ? (
                     <View style={styles.emptyState}>
                       <MaterialCommunityIcons
@@ -461,9 +458,10 @@ export default function Clients() {
               <View>
                 {/* Blank Header Cell */}
                 <View style={[styles.tableRow, styles.tableHeaderRow]}>
-                  <View style={{ width: COL.actions, paddingHorizontal: 10 }} />
+                  <View style={[styles.cell, { width: COL.actions }]}>
+                    <Text style={styles.colLabel}>Action</Text>
+                  </View>
                 </View>
-                <View style={styles.divider} />
 
                 {/* Sticky Action Rows */}
                 {paginated.map((item, index) => (
@@ -658,7 +656,11 @@ const styles = StyleSheet.create({
   retryText: { color: '#1677FF', fontSize: 13, fontWeight: '600' },
 
   tableOuter: { flexDirection: 'row', marginHorizontal: -16 },
-  tableHeaderRow: { backgroundColor: '#F9FAFB' },
+  tableHeaderRow: {
+    backgroundColor: '#F4F6F8',
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#E2E5EA',
+  },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -666,7 +668,13 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   cell: { paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center' },
-  colLabel: { fontSize: 12, fontWeight: '600', color: '#919EAB' },
+  colLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4B5563',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
   divider: { height: 1, backgroundColor: '#F0F2F5', marginVertical: 6 },
   separator: { height: 1, backgroundColor: '#F6F7F8' },
 
