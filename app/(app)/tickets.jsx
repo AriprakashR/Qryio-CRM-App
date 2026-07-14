@@ -52,7 +52,7 @@ const COL = {
   title: 160,
   status: 110,
   createdOn: 105,
-  actions: 54,
+  actions: 44,
 };
 const ROWS_OPTIONS = [5, 10, 25];
 
@@ -66,7 +66,7 @@ function formatStatus(s) {
 }
 
 // ── Table Row ─────────────────────────────────────────────────────────
-function TicketRow({ item, onAction }) {
+function TicketRow({ item }) {
   const sc = STATUS_COLORS[item.ticketStatus] ?? {
     bg: '#F3F4F6',
     text: '#374151',
@@ -104,21 +104,6 @@ function TicketRow({ item, onAction }) {
       </View>
       <View style={[styles.cell, { width: COL.createdOn }]}>
         <Text style={styles.metaText}>{createdOn}</Text>
-      </View>
-      <View
-        style={[styles.cell, { width: COL.actions, justifyContent: 'center' }]}
-      >
-        <TouchableOpacity
-          onPress={() => onAction(item)}
-          activeOpacity={0.7}
-          style={styles.editBtn}
-        >
-          <MaterialCommunityIcons
-            name='dots-vertical'
-            size={17}
-            color='#637381'
-          />
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -503,7 +488,7 @@ export default function Tickets() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps='handled'
       >
-        {/* ── Header (locked standard) ── */}
+        {/* ── Header ── */}
         <View style={styles.pageHeader}>
           <View style={styles.headerSide} />
           <Text style={styles.pageTitle}>Tickets</Text>
@@ -619,55 +604,92 @@ export default function Tickets() {
             </View>
           )}
 
-          {/* Table */}
+          {/* Table Container with Sticky Side Column */}
           {!loading && !error && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator
-              bounces={false}
-              nestedScrollEnabled
-              style={styles.tableScroll}
-            >
-              <View>
-                <View style={[styles.tableRow, styles.tableHeaderRow]}>
-                  {[
-                    ['code', COL.code, 'Code'],
-                    ['project', COL.project, 'Project'],
-                    ['component', COL.component, 'Component'],
-                    ['title', COL.title, 'Title'],
-                    ['status', COL.status, 'Status'],
-                    ['createdOn', COL.createdOn, 'Created On'],
-                    ['actions', COL.actions, ''],
-                  ].map(([key, w, label]) => (
-                    <View key={key} style={[styles.cell, { width: w }]}>
-                      <Text style={styles.colLabel}>{label}</Text>
-                    </View>
-                  ))}
-                </View>
+            <View style={styles.tableOuter}>
+              {/* Scrollable Data Columns */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator
+                bounces={false}
+                nestedScrollEnabled
+                style={{ flex: 1 }}
+              >
+                <View>
+                  <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                    {[
+                      ['code', COL.code, 'Code'],
+                      ['project', COL.project, 'Project'],
+                      ['component', COL.component, 'Component'],
+                      ['title', COL.title, 'Title'],
+                      ['status', COL.status, 'Status'],
+                      ['createdOn', COL.createdOn, 'Created On'],
+                    ].map(([key, w, label]) => (
+                      <View key={key} style={[styles.cell, { width: w }]}>
+                        <Text style={styles.colLabel}>{label}</Text>
+                      </View>
+                    ))}
+                  </View>
 
+                  <View style={styles.divider} />
+
+                  {paginated.length === 0 ? (
+                    <View style={styles.emptyState}>
+                      <MaterialCommunityIcons
+                        name='ticket-outline'
+                        size={40}
+                        color='#C4CDD5'
+                      />
+                      <Text style={styles.emptyText}>No tickets found</Text>
+                    </View>
+                  ) : (
+                    paginated.map((item, index) => (
+                      <View key={item.ticketId ?? index}>
+                        <TicketRow item={item} />
+                        {index < paginated.length - 1 && (
+                          <View style={styles.separator} />
+                        )}
+                      </View>
+                    ))
+                  )}
+                </View>
+              </ScrollView>
+
+              {/* Sticky Action Column */}
+              <View>
+                {/* Blank Header Cell */}
+                <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                  <View style={{ width: COL.actions, paddingHorizontal: 10 }} />
+                </View>
                 <View style={styles.divider} />
 
-                {paginated.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <MaterialCommunityIcons
-                      name='ticket-outline'
-                      size={40}
-                      color='#C4CDD5'
-                    />
-                    <Text style={styles.emptyText}>No tickets found</Text>
-                  </View>
-                ) : (
-                  paginated.map((item, index) => (
-                    <View key={item.ticketId ?? index}>
-                      <TicketRow item={item} onAction={handleAction} />
-                      {index < paginated.length - 1 && (
-                        <View style={styles.separator} />
-                      )}
+                {/* Sticky Action Rows */}
+                {paginated.map((item, index) => (
+                  <View key={item.ticketId ?? index}>
+                    <View
+                      style={[
+                        styles.tableRow,
+                        { paddingHorizontal: 10, justifyContent: 'center' },
+                      ]}
+                    >
+                      <TouchableOpacity
+                        onPress={() => handleAction(item)}
+                        activeOpacity={0.7}
+                      >
+                        <MaterialCommunityIcons
+                          name='dots-vertical'
+                          size={17}
+                          color='#637381'
+                        />
+                      </TouchableOpacity>
                     </View>
-                  ))
-                )}
+                    {index < paginated.length - 1 && (
+                      <View style={styles.separator} />
+                    )}
+                  </View>
+                ))}
               </View>
-            </ScrollView>
+            </View>
           )}
 
           {/* Pagination */}
@@ -868,9 +890,15 @@ const styles = StyleSheet.create({
   },
   retryText: { color: '#1677FF', fontSize: 13, fontWeight: '600' },
 
-  tableScroll: { marginHorizontal: -16 },
+  // Table Structure
+  tableOuter: { flexDirection: 'row', marginHorizontal: -16 },
   tableHeaderRow: { backgroundColor: '#F9FAFB' },
-  tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    minHeight: 56,
+  },
   cell: { paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center' },
   colLabel: { fontSize: 12, fontWeight: '600', color: '#919EAB' },
   divider: { height: 1, backgroundColor: '#F0F2F5', marginVertical: 6 },
@@ -886,7 +914,6 @@ const styles = StyleSheet.create({
   metaText: { fontSize: 12, color: '#637381' },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   badgeText: { fontSize: 11, fontWeight: '600' },
-  editBtn: { padding: 6, borderRadius: 6, backgroundColor: '#F4F6F8' },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 40,
@@ -894,6 +921,7 @@ const styles = StyleSheet.create({
   },
   emptyText: { color: '#919EAB', marginTop: 8, fontSize: 14 },
 
+  // Pagination
   pagination: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -44,12 +44,12 @@ const COL = {
   status: 90,
   endDate: 130,
   createdBy: 110,
-  actions: 54,
+  actions: 44,
 };
 const ROWS_OPTIONS = [5, 10, 25];
 
 // ── Table Row ─────────────────────────────────────────────────────────
-function ProjectRow({ item, onAction, resolvedRole }) {
+function ProjectRow({ item }) {
   const sc = STATUS_COLORS[item.status] ?? {
     bg: '#F3F4F6',
     text: '#374151',
@@ -67,13 +67,6 @@ function ProjectRow({ item, onAction, resolvedRole }) {
         year: 'numeric',
       })
     : '—';
-
-  const hasActions =
-    canUpdate(resolvedRole) ||
-    canDelete(resolvedRole) ||
-    canViewComponents(resolvedRole) ||
-    canViewAssignedClients(resolvedRole) ||
-    canViewAssignedUsers(resolvedRole);
 
   return (
     <View style={styles.tableRow}>
@@ -117,21 +110,6 @@ function ProjectRow({ item, onAction, resolvedRole }) {
       {/* Created By */}
       <View style={[styles.cell, { width: COL.createdBy }]}>
         <Text style={styles.metaText}>{createdBy}</Text>
-      </View>
-
-      {/* Actions */}
-      <View
-        style={[styles.cell, { width: COL.actions, justifyContent: 'center' }]}
-      >
-        {hasActions && (
-          <TouchableOpacity onPress={() => onAction(item)} activeOpacity={0.7}>
-            <MaterialCommunityIcons
-              name='dots-vertical'
-              size={20}
-              color='#637381'
-            />
-          </TouchableOpacity>
-        )}
       </View>
     </View>
   );
@@ -384,6 +362,7 @@ export default function Projects() {
     setEditProject(activeProject);
     setFormOpen(true);
   }, [activeProject]);
+
   const handleDeleteFromSheet = useCallback(() => {
     setActionSheet(false);
     setDeleteDialog(true);
@@ -444,7 +423,7 @@ export default function Projects() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps='handled'
       >
-        {/* ── Header (locked standard) ── */}
+        {/* ── Header ── */}
         <View style={styles.pageHeader}>
           <View style={styles.headerSide} />
           <Text style={styles.pageTitle}>Projects</Text>
@@ -516,58 +495,104 @@ export default function Projects() {
             </View>
           )}
 
-          {/* Table */}
+          {/* Table Container with Sticky Side Column */}
           {!loading && !error && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator
-              bounces={false}
-              nestedScrollEnabled
-              style={styles.tableScroll}
-            >
-              <View>
-                <View style={[styles.tableRow, styles.tableHeaderRow]}>
-                  {[
-                    ['name', COL.name, 'Project Name'],
-                    ['desc', COL.desc, 'Description'],
-                    ['status', COL.status, 'Status'],
-                    ['endDate', COL.endDate, 'End Date'],
-                    ['createdBy', COL.createdBy, 'Created By'],
-                    ['actions', COL.actions, ''],
-                  ].map(([key, w, label]) => (
-                    <View key={key} style={[styles.cell, { width: w }]}>
-                      <Text style={styles.colLabel}>{label}</Text>
-                    </View>
-                  ))}
-                </View>
+            <View style={styles.tableOuter}>
+              {/* Scrollable Data Columns */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator
+                bounces={false}
+                nestedScrollEnabled
+                style={{ flex: 1 }}
+              >
+                <View>
+                  <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                    {[
+                      ['name', COL.name, 'Project Name'],
+                      ['desc', COL.desc, 'Description'],
+                      ['status', COL.status, 'Status'],
+                      ['endDate', COL.endDate, 'End Date'],
+                      ['createdBy', COL.createdBy, 'Created By'],
+                    ].map(([key, w, label]) => (
+                      <View key={key} style={[styles.cell, { width: w }]}>
+                        <Text style={styles.colLabel}>{label}</Text>
+                      </View>
+                    ))}
+                  </View>
 
+                  <View style={styles.divider} />
+
+                  {paginated.length === 0 ? (
+                    <View style={styles.emptyState}>
+                      <MaterialCommunityIcons
+                        name='folder-outline'
+                        size={40}
+                        color='#C4CDD5'
+                      />
+                      <Text style={styles.emptyText}>No projects found</Text>
+                    </View>
+                  ) : (
+                    paginated.map((item, index) => (
+                      <View key={item.projectId ?? index}>
+                        <ProjectRow item={item} />
+                        {index < paginated.length - 1 && (
+                          <View style={styles.separator} />
+                        )}
+                      </View>
+                    ))
+                  )}
+                </View>
+              </ScrollView>
+
+              {/* Sticky Action Column */}
+              <View style={styles.stickyActionCol}>
+                {/* Blank Header Cell */}
+                <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                  <View style={{ width: COL.actions, paddingHorizontal: 10 }} />
+                </View>
                 <View style={styles.divider} />
 
-                {paginated.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <MaterialCommunityIcons
-                      name='folder-outline'
-                      size={40}
-                      color='#C4CDD5'
-                    />
-                    <Text style={styles.emptyText}>No projects found</Text>
-                  </View>
-                ) : (
-                  paginated.map((item, index) => (
+                {/* Sticky Action Rows */}
+                {paginated.map((item, index) => {
+                  const hasActions =
+                    canUpdate(resolvedRole) ||
+                    canDelete(resolvedRole) ||
+                    canViewComponents(resolvedRole) ||
+                    canViewAssignedClients(resolvedRole) ||
+                    canViewAssignedUsers(resolvedRole);
+
+                  return (
                     <View key={item.projectId ?? index}>
-                      <ProjectRow
-                        item={item}
-                        onAction={handleAction}
-                        resolvedRole={resolvedRole}
-                      />
+                      <View
+                        style={[
+                          styles.tableRow,
+                          { paddingHorizontal: 10, justifyContent: 'center' },
+                        ]}
+                      >
+                        {hasActions ? (
+                          <TouchableOpacity
+                            onPress={() => handleAction(item)}
+                            activeOpacity={0.7}
+                          >
+                            <MaterialCommunityIcons
+                              name='dots-vertical'
+                              size={20}
+                              color='#637381'
+                            />
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={{ width: 20 }} />
+                        )}
+                      </View>
                       {index < paginated.length - 1 && (
                         <View style={styles.separator} />
                       )}
                     </View>
-                  ))
-                )}
+                  );
+                })}
               </View>
-            </ScrollView>
+            </View>
           )}
 
           {/* Pagination */}
@@ -733,9 +758,15 @@ const styles = StyleSheet.create({
   },
   retryText: { color: '#1677FF', fontSize: 13, fontWeight: '600' },
 
-  tableScroll: { marginHorizontal: -16 },
+  // Table Structure
+  tableOuter: { flexDirection: 'row', marginHorizontal: -16 },
   tableHeaderRow: { backgroundColor: '#F9FAFB' },
-  tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    minHeight: 56,
+  },
   cell: { paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center' },
   colLabel: { fontSize: 12, fontWeight: '600', color: '#919EAB' },
   divider: { height: 1, backgroundColor: '#F0F2F5', marginVertical: 6 },
@@ -764,6 +795,7 @@ const styles = StyleSheet.create({
   },
   emptyText: { color: '#919EAB', marginTop: 8, fontSize: 14 },
 
+  // Pagination
   pagination: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -788,6 +820,7 @@ const styles = StyleSheet.create({
   menuActive: { color: '#1677FF', fontWeight: '700' },
   pageButtons: { flexDirection: 'row' },
 
+  // Action sheet
   sheetOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -837,6 +870,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // Delete dialog
   dialogOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

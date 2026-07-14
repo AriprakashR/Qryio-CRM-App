@@ -88,22 +88,6 @@ function TableRow({ item, onEdit }) {
             : (item.createdBy ?? '—')}
         </Text>
       </View>
-
-      <View
-        style={[styles.cell, { width: COL.actions, justifyContent: 'center' }]}
-      >
-        <TouchableOpacity
-          onPress={() => onEdit(item)}
-          activeOpacity={0.7}
-          style={styles.editBtn}
-        >
-          <MaterialCommunityIcons
-            name='pencil-outline'
-            size={17}
-            color='#637381'
-          />
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -263,53 +247,84 @@ export default function Employee() {
 
           {/* ── Table ── */}
           {!loading && !error && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator
-              bounces={false}
-              nestedScrollEnabled
-              style={styles.tableScroll}
-            >
-              <View>
-                {/* Header row */}
-                <View style={[styles.tableRow, styles.tableHeaderRow]}>
-                  {[
-                    ['nameEmail', COL.nameEmail, 'Name'],
-                    ['group', COL.group, 'Group'],
-                    ['status', COL.status, 'Status'],
-                    ['createdOn', COL.createdOn, 'Created On'],
-                    ['createdBy', COL.createdBy, 'Created By'],
-                    ['actions', COL.actions, ''],
-                  ].map(([key, w, label]) => (
-                    <View key={key} style={[styles.cell, { width: w }]}>
-                      <Text style={styles.colLabel}>{label}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                <View style={styles.divider} />
-
-                {paginated.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <MaterialCommunityIcons
-                      name='account-search-outline'
-                      size={40}
-                      color='#C4CDD5'
-                    />
-                    <Text style={styles.emptyText}>No employees found</Text>
+            <View style={styles.tableOuter}>
+              {/* Scrollable data columns */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator
+                bounces={false}
+                nestedScrollEnabled
+                style={{ flex: 1 }}
+              >
+                <View>
+                  <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                    {[
+                      ['nameEmail', COL.nameEmail, 'Name'],
+                      ['group', COL.group, 'Group'],
+                      ['status', COL.status, 'Status'],
+                      ['createdOn', COL.createdOn, 'Created On'],
+                      ['createdBy', COL.createdBy, 'Created By'],
+                    ].map(([key, w, label]) => (
+                      <View key={key} style={[styles.cell, { width: w }]}>
+                        <Text style={styles.colLabel}>{label}</Text>
+                      </View>
+                    ))}
                   </View>
-                ) : (
-                  paginated.map((item, index) => (
-                    <View key={item.userId ?? item.id ?? index}>
-                      <TableRow item={item} onEdit={handleEdit} />
-                      {index < paginated.length - 1 && (
-                        <View style={styles.separator} />
-                      )}
+                  <View style={styles.divider} />
+                  {paginated.length === 0 ? (
+                    <View style={styles.emptyState}>
+                      <MaterialCommunityIcons
+                        name='account-search-outline'
+                        size={40}
+                        color='#C4CDD5'
+                      />
+                      <Text style={styles.emptyText}>No employees found</Text>
                     </View>
-                  ))
-                )}
+                  ) : (
+                    paginated.map((item, index) => (
+                      <View key={item.userId ?? index}>
+                        <TableRow item={item} />
+                        {index < paginated.length - 1 && (
+                          <View style={styles.separator} />
+                        )}
+                      </View>
+                    ))
+                  )}
+                </View>
+              </ScrollView>
+
+              {/* Sticky action column */}
+              <View>
+                <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                  <View style={{ width: COL.actions, paddingHorizontal: 10 }} />
+                </View>
+                <View style={styles.divider} />
+                {paginated.map((item, index) => (
+                  <View key={item.userId ?? index}>
+                    <View
+                      style={[
+                        styles.tableRow,
+                        { paddingHorizontal: 10, justifyContent: 'center' },
+                      ]}
+                    >
+                      <TouchableOpacity
+                        onPress={() => handleEdit(item)}
+                        activeOpacity={0.7}
+                      >
+                        <MaterialCommunityIcons
+                          name='pencil-outline'
+                          size={17}
+                          color='#637381'
+                        />
+                      </TouchableOpacity>
+                    </View>
+                    {index < paginated.length - 1 && (
+                      <View style={styles.separator} />
+                    )}
+                  </View>
+                ))}
               </View>
-            </ScrollView>
+            </View>
           )}
 
           {/* ── Pagination ── */}
@@ -455,10 +470,14 @@ const styles = StyleSheet.create({
     borderColor: '#1677FF',
   },
   retryText: { color: '#1677FF', fontSize: 13, fontWeight: '600' },
-
-  tableScroll: { marginHorizontal: -16 },
+  tableOuter: { flexDirection: 'row', marginHorizontal: -16 },
   tableHeaderRow: { backgroundColor: '#F9FAFB' },
-  tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    minHeight: 56,
+  },
   cell: { paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center' },
   colLabel: { fontSize: 12, fontWeight: '600', color: '#919EAB' },
   divider: { height: 1, backgroundColor: '#F0F2F5', marginVertical: 6 },
@@ -501,9 +520,6 @@ const styles = StyleSheet.create({
   rowsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E8EB',
-    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
     gap: 2,
