@@ -1,0 +1,301 @@
+// ── Dummy data for offline / no-backend development ────────────────────
+// Toggle this off once a real backend is reachable.
+export const MOCK_ENABLED = true;
+
+const now = Date.now();
+const daysAgo = n => new Date(now - n * 86400000).toISOString();
+const daysFromNow = n => new Date(now + n * 86400000).toISOString();
+
+// ── Base records ─────────────────────────────────────────────────────
+const employees = [
+  {
+    userId: 1,
+    userName: 'Ravi Kumar',
+    email: 'ravi.kumar@qryio.com',
+    userGroup: { userGroupName: 'Developer' },
+    status: true,
+    createdOn: daysAgo(220),
+    createdBy: { userName: 'System' },
+  },
+  {
+    userId: 2,
+    userName: 'Priya Sharma',
+    email: 'priya.sharma@qryio.com',
+    userGroup: { userGroupName: 'Admin' },
+    status: true,
+    createdOn: daysAgo(300),
+    createdBy: { userName: 'System' },
+  },
+  {
+    userId: 3,
+    userName: 'Arjun Mehta',
+    email: 'arjun.mehta@qryio.com',
+    userGroup: { userGroupName: 'Developer' },
+    status: false,
+    createdOn: daysAgo(150),
+    createdBy: { userName: 'Priya Sharma' },
+  },
+  {
+    userId: 4,
+    userName: 'Sneha Iyer',
+    email: 'sneha.iyer@qryio.com',
+    userGroup: { userGroupName: 'Super Admin' },
+    status: true,
+    createdOn: daysAgo(400),
+    createdBy: { userName: 'System' },
+  },
+  {
+    userId: 5,
+    userName: 'Karthik Rao',
+    email: 'karthik.rao@qryio.com',
+    userGroup: { userGroupName: 'Developer' },
+    status: true,
+    createdOn: daysAgo(60),
+    createdBy: { userName: 'Priya Sharma' },
+  },
+];
+
+const clients = [
+  {
+    clientId: 1,
+    clientName: 'Acme Corp',
+    clientCode: 'ACME01',
+    status: true,
+    createdOn: daysAgo(280),
+    createdBy: { userName: 'Priya Sharma' },
+  },
+  {
+    clientId: 2,
+    clientName: 'Globex Inc',
+    clientCode: 'GLBX02',
+    status: true,
+    createdOn: daysAgo(190),
+    createdBy: { userName: 'Priya Sharma' },
+  },
+  {
+    clientId: 3,
+    clientName: 'Initech Solutions',
+    clientCode: 'INIT03',
+    status: false,
+    createdOn: daysAgo(340),
+    createdBy: { userName: 'System' },
+  },
+  {
+    clientId: 4,
+    clientName: 'Umbrella Ltd',
+    clientCode: 'UMBR04',
+    status: true,
+    createdOn: daysAgo(40),
+    createdBy: { userName: 'Sneha Iyer' },
+  },
+];
+
+const projects = [
+  {
+    projectId: 1,
+    projectName: 'Qryio CRM',
+    description: 'Internal ticketing & CRM platform',
+    status: true,
+    endDate: daysFromNow(120),
+    createdBy: { userName: 'Ravi Kumar' },
+  },
+  {
+    projectId: 2,
+    projectName: 'Client Portal',
+    description: 'Self-service portal for clients',
+    status: true,
+    endDate: daysFromNow(12),
+    createdBy: { userName: 'Priya Sharma' },
+  },
+  {
+    projectId: 3,
+    projectName: 'Legacy Migration',
+    description: 'Migrate legacy billing system to the cloud',
+    status: false,
+    endDate: daysAgo(15),
+    createdBy: { userName: 'Sneha Iyer' },
+  },
+  {
+    projectId: 4,
+    projectName: 'Mobile App Revamp',
+    description: 'React Native rewrite of the mobile app',
+    status: true,
+    endDate: daysFromNow(200),
+    createdBy: { userName: 'Karthik Rao' },
+  },
+];
+
+const ticketBase = [
+  {
+    ticketId: 1,
+    ticketCode: 'TCK-1001',
+    ticketStatus: 'CREATED',
+    title: 'Login page not loading on slow network',
+    description:
+      'Users on 3G connections see a blank screen instead of the login form.',
+    remarks: null,
+    componentName: 'Authentication',
+    project: projects[0],
+    client: clients[0],
+    projectLead: employees[0],
+    createdOn: daysAgo(6),
+    modifiedOn: daysAgo(6),
+  },
+  {
+    ticketId: 2,
+    ticketCode: 'TCK-1002',
+    ticketStatus: 'IN_PROGRESS',
+    title: 'Export to Excel fails for large ticket lists',
+    description:
+      'Exporting more than 500 tickets times out and shows a generic error.',
+    remarks: 'Investigating pagination in the export query.',
+    componentName: 'Reports',
+    project: projects[0],
+    client: clients[1],
+    projectLead: employees[0],
+    createdOn: daysAgo(9),
+    modifiedOn: daysAgo(2),
+  },
+  {
+    ticketId: 3,
+    ticketCode: 'TCK-1003',
+    ticketStatus: 'RESOLVED',
+    title: 'Add dark mode support',
+    description: 'Client requested a dark theme option in settings.',
+    remarks: 'Shipped behind a feature flag, enabled for all users.',
+    componentName: 'UI/UX',
+    project: projects[1],
+    client: clients[1],
+    projectLead: employees[4],
+    createdOn: daysAgo(30),
+    modifiedOn: daysAgo(20),
+  },
+  {
+    ticketId: 4,
+    ticketCode: 'TCK-1004',
+    ticketStatus: 'CANCELLED',
+    title: 'Duplicate of TCK-1001',
+    description: 'Reported twice by different users on the same client team.',
+    remarks: 'Closed as duplicate.',
+    componentName: 'General',
+    project: projects[0],
+    client: clients[0],
+    projectLead: employees[0],
+    createdOn: daysAgo(6),
+    modifiedOn: daysAgo(5),
+  },
+  {
+    ticketId: 5,
+    ticketCode: 'TCK-1005',
+    ticketStatus: 'CREATED',
+    title: 'Ticket detail page crashes on Android',
+    description:
+      'App crashes when opening a ticket with no attachments on Android 12.',
+    remarks: null,
+    componentName: 'Mobile App',
+    project: projects[3],
+    client: clients[2],
+    projectLead: employees[2],
+    createdOn: daysAgo(1),
+    modifiedOn: daysAgo(1),
+  },
+  {
+    ticketId: 6,
+    ticketCode: 'TCK-1006',
+    ticketStatus: 'IN_PROGRESS',
+    title: 'Slow dashboard load times',
+    description: 'Dashboard takes 8-10s to load for accounts with many tickets.',
+    remarks: 'Adding server-side caching for aggregate counts.',
+    componentName: 'Performance',
+    project: projects[0],
+    client: clients[3],
+    projectLead: employees[4],
+    createdOn: daysAgo(4),
+    modifiedOn: daysAgo(1),
+  },
+];
+
+function toTicketListItem(t) {
+  return {
+    ticketId: t.ticketId,
+    ticketCode: t.ticketCode,
+    ticketStatus: t.ticketStatus,
+    title: t.title,
+    componentName: t.componentName,
+    createdOn: t.createdOn,
+    assignResponseDto: { project: t.project },
+  };
+}
+
+function toTicketDetail(t) {
+  return {
+    ticketId: t.ticketId,
+    ticketCode: t.ticketCode,
+    ticketStatus: t.ticketStatus,
+    title: t.title,
+    description: t.description,
+    remarks: t.remarks,
+    componentName: t.componentName,
+    attachments: [],
+    assignResponseDto: {
+      project: t.project,
+      client: t.client,
+      projectLead: t.projectLead,
+      createdOn: t.createdOn,
+      modifiedOn: t.modifiedOn,
+    },
+  };
+}
+
+const ok = (data = {}) => ({ status: 'success', message: 'OK', data });
+
+// ── URL → handler map. `url` is the axios config.url with the baseURL
+// stripped (e.g. "ctpl/tickets/list"); `payload` is the parsed JSON body. ──
+export const MOCK_HANDLERS = {
+  'ctpl/tickets/list': () =>
+    ok({ data: ticketBase.map(toTicketListItem), total: ticketBase.length }),
+
+  'ctpl/tickets/view': payload => {
+    const ticket = ticketBase.find(t => t.ticketId === payload?.ticketId);
+    return ok(ticket ? toTicketDetail(ticket) : null);
+  },
+
+  'ctpl/tickets/update/status': payload => {
+    const ticket = ticketBase.find(t => t.ticketId === payload?.ticketId);
+    if (ticket) {
+      ticket.ticketStatus = payload.ticketStatus;
+      ticket.remarks = payload.remarks ?? ticket.remarks;
+      ticket.modifiedOn = new Date().toISOString();
+    }
+    return ok({});
+  },
+
+  'ctpl/tickets/create': () => ok({}),
+
+  'ctpl/user/company-users': () => ok(employees),
+  'ctpl/user/company-users/create': () => ok({}),
+  'ctpl/user/company-users/update': () => ok({}),
+  'ctpl/user/delete': () => ok({}),
+
+  'ctpl/master/clients/list': () => ok(clients),
+  'ctpl/master/clients/info-list': () => ok(clients),
+  'ctpl/master/clients/create': () => ok({}),
+  'ctpl/master/clients/update': () => ok({}),
+  'ctpl/master/clients/delete': () => ok({}),
+
+  'ctpl/master/projects': () => ok(projects),
+  'ctpl/master/project/info-list': () => ok(projects),
+  'ctpl/master/projects/create': () => ok({}),
+  'ctpl/master/projects/update': () => ok({}),
+  'ctpl/master/projects/delete': () => ok({}),
+  'ctpl/master/component/info-list': () => ok([]),
+
+  'ctpl/tickets/user-projects': () => ok(projects),
+  'ctpl/tickets/project-components': () =>
+    ok([
+      { componentId: 1, componentName: 'Authentication' },
+      { componentId: 2, componentName: 'Reports' },
+      { componentId: 3, componentName: 'UI/UX' },
+      { componentId: 4, componentName: 'Performance' },
+    ]),
+};

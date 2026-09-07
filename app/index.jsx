@@ -18,6 +18,55 @@ import { sendOtp, verifyOtp, getUserProfile } from '../api/authService';
 import { setLoginTime } from '../api/axiosInstance';
 import { useUser } from '../context/UserContext';
 
+// ── Dev-only dummy logins (no backend needed) ──────────────────────
+// Shapes mirror what UserContext.getUserRole() expects from a real profile.
+const DUMMY_PROFILES = [
+  {
+    role: 'Super Admin',
+    profile: {
+      defaultUser: true,
+      email: 'superadmin@dummy.com',
+      userName: 'Super Admin',
+    },
+  },
+  {
+    role: 'Company Admin',
+    profile: {
+      userType: 'Company_User',
+      email: 'companyadmin@dummy.com',
+      userName: 'Company Admin',
+      userGroup: { roles: [{ roleName: 'ROLE_Admin' }] },
+    },
+  },
+  {
+    role: 'Company User',
+    profile: {
+      userType: 'Company_User',
+      email: 'companyuser@dummy.com',
+      userName: 'Company User',
+      userGroup: { roles: [{ roleName: 'ROLE_User' }] },
+    },
+  },
+  {
+    role: 'Client Admin',
+    profile: {
+      userType: 'Client_User',
+      email: 'clientadmin@dummy.com',
+      userName: 'Client Admin',
+      userGroup: { roles: [{ roleName: 'ROLE_Client_Admin' }] },
+    },
+  },
+  {
+    role: 'Client User',
+    profile: {
+      userType: 'Client_User',
+      email: 'clientuser@dummy.com',
+      userName: 'Client User',
+      userGroup: { roles: [{ roleName: 'ROLE_User' }] },
+    },
+  },
+];
+
 export default function Login() {
   const router = useRouter();
   const { setUser } = useUser();
@@ -91,6 +140,24 @@ export default function Login() {
     setOtp('');
     setError('');
   }, []);
+
+  // ── Dev-only: sign in with a dummy profile, no backend ────────────
+  const handleDummyLogin = useCallback(
+    async profile => {
+      setLoading(true);
+      setError('');
+      try {
+        await AsyncStorage.setItem('token', 'dummy-token');
+        await AsyncStorage.setItem('qryio_user', JSON.stringify(profile));
+        await setLoginTime();
+        await setUser(profile);
+        router.replace('/dashboard');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [setUser, router],
+  );
 
   // ── UI (keep exactly as before) ──────────────────────────────────
   return (
@@ -235,6 +302,25 @@ export default function Login() {
               </>
             )}
           </View>
+
+          {__DEV__ && (
+            <View style={styles.devCard}>
+              <Text style={styles.devTitle}>Dev quick login (no backend)</Text>
+              <View style={styles.devRow}>
+                {DUMMY_PROFILES.map(({ role, profile }) => (
+                  <TouchableOpacity
+                    key={role}
+                    style={styles.devButton}
+                    onPress={() => handleDummyLogin(profile)}
+                    disabled={loading}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.devButtonText}>{role}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
     </LinearGradient>
@@ -304,4 +390,30 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   backButtonText: { fontSize: 13, color: '#637381' },
+  devCard: {
+    marginTop: 16,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DDE1E6',
+    borderStyle: 'dashed',
+    padding: 14,
+  },
+  devTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#919EAB',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  devRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
+  devButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#1C252E',
+  },
+  devButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
 });
