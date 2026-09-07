@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Text, Menu, Divider } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { getTicketsList, updateTicketStatus } from '../../api/ticketService';
 import { TicketFormModal } from '../../components/TicketFormModal';
 import { TicketUpdateStatusModal } from '../../components/TicketUpdateStatusModal';
@@ -359,6 +360,7 @@ function CancelDialog({ visible, ticket, onCancel, onConfirm, loading }) {
 // ── Main Screen ───────────────────────────────────────────────────────
 export default function Tickets() {
   const { resolvedRole } = useUser();
+  const router = useRouter();
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -445,8 +447,13 @@ export default function Tickets() {
 
   const handleView = useCallback(() => {
     setActionSheet(false);
-    // TODO: router.push(`/tickets/${activeTicket.ticketId}`);
-  }, [activeTicket]);
+    if (activeTicket) {
+      router.push({
+        pathname: '/ticket-detail',
+        params: { ticketId: activeTicket.ticketId },
+      });
+    }
+  }, [activeTicket, router]);
 
   const handleUpdateFromSheet = useCallback(() => {
     setActionSheet(false);
