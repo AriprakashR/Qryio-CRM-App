@@ -14,5 +14,7 @@ export const createClientUser = payload =>
   axiosInstance.post('ctpl/user/client-users/create', payload);
 export const updateClientUser = payload =>
   axiosInstance.post('ctpl/user/client-users/update', payload);
+export const deleteClientUser = payload =>
+  axiosInstance.post('ctpl/user/client-users/delete', payload);
 export const getClientAssignedProjects = payload =>
   axiosInstance.post('ctpl/master/clients/assigned-projects', payload);

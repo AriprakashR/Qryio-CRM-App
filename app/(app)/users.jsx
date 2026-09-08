@@ -7,21 +7,29 @@ import {
   TextInput,
   ActivityIndicator,
   Modal,
-  Platform,
 } from 'react-native';
 import { Text, Menu, Divider } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { getClientsList, deleteClients } from '../../api/clientService';
-import { ClientFormModal } from '../../components/ClientFormModal';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  getClientsList,
+  getClientUsers,
+  deleteClientUser,
+} from '../../api/clientService';
+import { ClientUserFormModal } from '../../components/ClientUserFormModal';
+import { useUser } from '../../context/UserContext';
 
+const GROUP_COLORS = {
+  Admin: { bg: '#EDE9FE', text: '#7C3AED' },
+  User: { bg: '#DBEAFE', text: '#1D4ED8' },
+};
 const STATUS_COLORS = {
   true: { bg: '#DCFCE7', text: '#16A34A', label: 'Active' },
   false: { bg: '#FEE2E2', text: '#DC2626', label: 'Inactive' },
 };
 const COL = {
-  name: 180,
-  code: 110,
+  nameEmail: 220,
+  group: 100,
   status: 90,
   createdOn: 115,
   createdBy: 110,
@@ -30,63 +38,144 @@ const COL = {
 const ROWS_OPTIONS = [5, 10, 25];
 
 // ── Table Row ─────────────────────────────────────────────────────────
-function TableRow({ item }) {
-  const sc = STATUS_COLORS[item.status] ?? {
+function TableRow({ item, onAction }) {
+  const groupName = item.userGroup?.userGroupName ?? '';
+  const gc = GROUP_COLORS[groupName] || { bg: '#F3F4F6', text: '#374151' };
+  const sc = STATUS_COLORS[item.status] || {
     bg: '#F3F4F6',
     text: '#374151',
-    label: '—',
+    label: String(item.status),
   };
   const createdOn = item.createdOn
     ? new Date(item.createdOn).toLocaleDateString('en-IN')
     : '—';
-  const createdBy =
-    typeof item.createdBy === 'object'
-      ? (item.createdBy?.userName ?? '—')
-      : (item.createdBy ?? '—');
 
   return (
     <View style={styles.tableRow}>
-      {/* Name + avatar */}
-      <View style={[styles.cell, { width: COL.name }]}>
+      <View style={[styles.cell, { width: COL.nameEmail }]}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
-            {(item.clientName ?? 'C').charAt(0).toUpperCase()}
+            {(item.userName ?? 'U').charAt(0).toUpperCase()}
           </Text>
         </View>
-        <Text style={styles.nameText} numberOfLines={1}>
-          {item.clientName ?? '—'}
-        </Text>
-      </View>
-
-      {/* Client Code — monospace badge */}
-      <View style={[styles.cell, { width: COL.code }]}>
-        <View style={styles.codeBadge}>
-          <Text style={styles.codeText}>{item.clientCode ?? '—'}</Text>
+        <View style={styles.nameBlock}>
+          <Text style={styles.nameText} numberOfLines={1}>
+            {item.userName ?? '—'}
+          </Text>
+          <Text style={styles.emailText} numberOfLines={1}>
+            {item.email ?? '—'}
+          </Text>
         </View>
       </View>
 
-      {/* Status */}
+      <View style={[styles.cell, { width: COL.group }]}>
+        <View style={[styles.badge, { backgroundColor: gc.bg }]}>
+          <Text style={[styles.badgeText, { color: gc.text }]}>
+            {groupName || '—'}
+          </Text>
+        </View>
+      </View>
+
       <View style={[styles.cell, { width: COL.status }]}>
         <View style={[styles.badge, { backgroundColor: sc.bg }]}>
           <Text style={[styles.badgeText, { color: sc.text }]}>{sc.label}</Text>
         </View>
       </View>
 
-      {/* Created On */}
       <View style={[styles.cell, { width: COL.createdOn }]}>
         <Text style={styles.metaText}>{createdOn}</Text>
       </View>
 
-      {/* Created By */}
       <View style={[styles.cell, { width: COL.createdBy }]}>
-        <Text style={styles.metaText}>{createdBy}</Text>
+        <Text style={styles.metaText}>
+          {typeof item.createdBy === 'object'
+            ? (item.createdBy?.userName ?? '—')
+            : (item.createdBy ?? '—')}
+        </Text>
       </View>
     </View>
   );
 }
 
+// ── Action Sheet ──────────────────────────────────────────────────────
+function ActionSheet({ visible, onClose, onEdit, onDelete }) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType='slide'
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity
+        style={styles.sheetOverlay}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <View style={styles.sheet}>
+          <View style={styles.sheetHandle} />
+
+          <TouchableOpacity
+            style={styles.sheetOption}
+            onPress={onEdit}
+            activeOpacity={0.7}
+          >
+            <View style={styles.sheetIconWrap}>
+              <MaterialCommunityIcons
+                name='pencil-outline'
+                size={20}
+                color='#1677FF'
+              />
+            </View>
+            <Text style={styles.sheetOptionText}>Edit User</Text>
+            <MaterialCommunityIcons
+              name='chevron-right'
+              size={20}
+              color='#C4CDD5'
+            />
+          </TouchableOpacity>
+
+          <Divider />
+
+          <TouchableOpacity
+            style={styles.sheetOption}
+            onPress={onDelete}
+            activeOpacity={0.7}
+          >
+            <View
+              style={[styles.sheetIconWrap, { backgroundColor: '#FEE2E2' }]}
+            >
+              <MaterialCommunityIcons
+                name='delete-outline'
+                size={20}
+                color='#D32F2F'
+              />
+            </View>
+            <Text style={[styles.sheetOptionText, { color: '#D32F2F' }]}>
+              Delete User
+            </Text>
+            <MaterialCommunityIcons
+              name='chevron-right'
+              size={20}
+              color='#C4CDD5'
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.sheetOption, styles.sheetCancel]}
+            onPress={onClose}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.sheetCancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
 // ── Confirm Delete Dialog ─────────────────────────────────────────────
-function DeleteDialog({ visible, clientName, onCancel, onConfirm, loading }) {
+function DeleteDialog({ visible, userName, onCancel, onConfirm, loading }) {
   return (
     <Modal
       visible={visible}
@@ -104,11 +193,11 @@ function DeleteDialog({ visible, clientName, onCancel, onConfirm, loading }) {
               color='#D32F2F'
             />
           </View>
-          <Text style={styles.dialogTitle}>Delete Client?</Text>
+          <Text style={styles.dialogTitle}>Delete User?</Text>
           <Text style={styles.dialogBody}>
             Are you sure you want to delete{' '}
             <Text style={{ fontWeight: '700', color: '#1C252E' }}>
-              {clientName}
+              {userName}
             </Text>
             ? This action cannot be undone.
           </Text>
@@ -140,111 +229,17 @@ function DeleteDialog({ visible, clientName, onCancel, onConfirm, loading }) {
   );
 }
 
-// ── Action Sheet ──────────────────────────────────────────────────────
-function ActionSheet({ visible, onClose, onEdit, onViewUsers, onDelete }) {
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType='slide'
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
-      <TouchableOpacity
-        style={styles.sheetOverlay}
-        activeOpacity={1}
-        onPress={onClose}
-      >
-        <View style={styles.sheet}>
-          <View style={styles.sheetHandle} />
-
-          <TouchableOpacity
-            style={styles.sheetOption}
-            onPress={onEdit}
-            activeOpacity={0.7}
-          >
-            <View style={styles.sheetIconWrap}>
-              <MaterialCommunityIcons
-                name='pencil-outline'
-                size={20}
-                color='#1677FF'
-              />
-            </View>
-            <Text style={styles.sheetOptionText}>Edit Client</Text>
-            <MaterialCommunityIcons
-              name='chevron-right'
-              size={20}
-              color='#C4CDD5'
-            />
-          </TouchableOpacity>
-
-          <Divider />
-
-          <TouchableOpacity
-            style={styles.sheetOption}
-            onPress={onViewUsers}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[styles.sheetIconWrap, { backgroundColor: '#DBEAFE' }]}
-            >
-              <MaterialCommunityIcons
-                name='account-multiple-outline'
-                size={20}
-                color='#1D4ED8'
-              />
-            </View>
-            <Text style={styles.sheetOptionText}>View Users</Text>
-            <MaterialCommunityIcons
-              name='chevron-right'
-              size={20}
-              color='#C4CDD5'
-            />
-          </TouchableOpacity>
-
-          <Divider />
-
-          <TouchableOpacity
-            style={styles.sheetOption}
-            onPress={onDelete}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[styles.sheetIconWrap, { backgroundColor: '#FEE2E2' }]}
-            >
-              <MaterialCommunityIcons
-                name='delete-outline'
-                size={20}
-                color='#D32F2F'
-              />
-            </View>
-            <Text style={[styles.sheetOptionText, { color: '#D32F2F' }]}>
-              Delete Client
-            </Text>
-            <MaterialCommunityIcons
-              name='chevron-right'
-              size={20}
-              color='#C4CDD5'
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.sheetOption, styles.sheetCancel]}
-            onPress={onClose}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.sheetCancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    </Modal>
-  );
-}
-
 // ── Main Screen ───────────────────────────────────────────────────────
-export default function Clients() {
+export default function Users() {
   const router = useRouter();
-  const [clients, setClients] = useState([]);
+  const { clientId } = useLocalSearchParams();
+  const { isClientAdmin } = useUser();
+  // Drilled in from the Clients list (Company Admin) vs. reached via the
+  // drawer's own "Users" link (Client Admin) — same as web's clientId param.
+  const showBreadcrumb = !!clientId;
+
+  const [client, setClient] = useState(null);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -252,43 +247,55 @@ export default function Clients() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [menuVisible, setMenuVisible] = useState(false);
 
-  // Modal states
   const [formOpen, setFormOpen] = useState(false);
-  const [editClient, setEditClient] = useState(null);
+  const [editUser, setEditUser] = useState(null);
   const [actionSheet, setActionSheet] = useState(false);
-  const [activeClient, setActiveClient] = useState(null);
+  const [activeUser, setActiveUser] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   // ── Fetch ─────────────────────────────────────────────────────────
-  const fetchClients = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await getClientsList();
-      setClients(res.data.data ?? []);
+      const clientsRes = await getClientsList();
+      const allClients = clientsRes.data.data ?? [];
+      const targetClient = clientId
+        ? allClients.find(c => String(c.clientId) === String(clientId))
+        : allClients[0];
+      setClient(targetClient ?? null);
+
+      if (targetClient) {
+        const usersRes = await getClientUsers({
+          clientId: targetClient.clientId,
+        });
+        setUsers(usersRes.data.data ?? []);
+      } else {
+        setUsers([]);
+      }
     } catch (err) {
-      setError('Failed to load clients.');
+      setError('Failed to load users.');
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [clientId]);
 
   useEffect(() => {
-    fetchClients();
-  }, [fetchClients]);
+    fetchData();
+  }, [fetchData]);
 
   // ── Derived ───────────────────────────────────────────────────────
   const filtered = useMemo(
     () =>
-      clients.filter(c => {
-        const name = (c.clientName ?? '').toLowerCase();
-        const code = (c.clientCode ?? '').toLowerCase();
+      users.filter(u => {
+        const name = (u.userName ?? '').toLowerCase();
+        const email = (u.email ?? '').toLowerCase();
         const q = search.toLowerCase();
-        return name.includes(q) || code.includes(q);
+        return name.includes(q) || email.includes(q);
       }),
-    [clients, search],
+    [users, search],
   );
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
@@ -307,25 +314,15 @@ export default function Clients() {
 
   // ── Action handlers ───────────────────────────────────────────────
   const handleAction = useCallback(item => {
-    setActiveClient(item);
+    setActiveUser(item);
     setActionSheet(true);
   }, []);
 
   const handleEditFromSheet = useCallback(() => {
     setActionSheet(false);
-    setEditClient(activeClient);
+    setEditUser(activeUser);
     setFormOpen(true);
-  }, [activeClient]);
-
-  const handleViewUsersFromSheet = useCallback(() => {
-    setActionSheet(false);
-    if (activeClient) {
-      router.push({
-        pathname: '/users',
-        params: { clientId: activeClient.clientId },
-      });
-    }
-  }, [activeClient, router]);
+  }, [activeUser]);
 
   const handleDeleteFromSheet = useCallback(() => {
     setActionSheet(false);
@@ -333,36 +330,32 @@ export default function Clients() {
   }, []);
 
   const handleConfirmDelete = useCallback(async () => {
-    if (!activeClient) return;
+    if (!activeUser) return;
     setDeleteLoading(true);
     try {
-      await deleteClients({
-        clientId: activeClient.clientId,
-        clientCode: activeClient.clientCode,
-        clientName: activeClient.clientName,
-      });
+      await deleteClientUser({ userId: activeUser.userId });
       setDeleteDialog(false);
-      setActiveClient(null);
-      await fetchClients();
+      setActiveUser(null);
+      await fetchData();
     } catch (err) {
       setDeleteDialog(false);
       console.error(err);
     } finally {
       setDeleteLoading(false);
     }
-  }, [activeClient, fetchClients]);
+  }, [activeUser, fetchData]);
 
   const handleNew = useCallback(() => {
-    setEditClient(null);
+    setEditUser(null);
     setFormOpen(true);
   }, []);
   const handleFormClose = useCallback(() => {
     setFormOpen(false);
-    setEditClient(null);
+    setEditUser(null);
   }, []);
   const handleFormSubmit = useCallback(async () => {
-    await fetchClients();
-  }, [fetchClients]);
+    await fetchData();
+  }, [fetchData]);
 
   return (
     <View style={styles.container}>
@@ -372,10 +365,47 @@ export default function Clients() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps='handled'
       >
+        {/* ── Breadcrumb (Company Admin drilling into a client) ── */}
+        {showBreadcrumb && (
+          <View style={styles.breadcrumb}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backBtn}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons
+                name='arrow-left'
+                size={18}
+                color='#1C252E'
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push('/clients')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.breadcrumbLink}>Clients</Text>
+            </TouchableOpacity>
+            <MaterialCommunityIcons
+              name='chevron-right'
+              size={16}
+              color='#919EAB'
+            />
+            <Text style={styles.breadcrumbMid} numberOfLines={1}>
+              {client?.clientName ?? '—'}
+            </Text>
+            <MaterialCommunityIcons
+              name='chevron-right'
+              size={16}
+              color='#919EAB'
+            />
+            <Text style={styles.breadcrumbCurrent}>Users</Text>
+          </View>
+        )}
+
         {/* ── Header ── */}
         <View style={styles.pageHeader}>
           <View style={styles.headerSide} />
-          <Text style={styles.pageTitle}>Clients</Text>
+          <Text style={styles.pageTitle}>Users</Text>
           <View style={[styles.headerSide, { alignItems: 'flex-end' }]}>
             <TouchableOpacity
               style={styles.addButton}
@@ -387,6 +417,16 @@ export default function Clients() {
           </View>
         </View>
 
+        {client && (
+          <Text style={styles.subtitle}>
+            {client.clientName}
+            {'  ·  '}
+            <Text style={styles.subtitleCode}>{client.clientCode}</Text>
+            {'  ·  '}
+            {users.length} user{users.length !== 1 ? 's' : ''}
+          </Text>
+        )}
+
         {/* ── Card ── */}
         <View style={styles.card}>
           {/* Search */}
@@ -394,7 +434,7 @@ export default function Clients() {
             <MaterialCommunityIcons name='magnify' size={20} color='#919EAB' />
             <TextInput
               style={styles.searchInput}
-              placeholder='Search by name or code...'
+              placeholder='Search...'
               placeholderTextColor='#919EAB'
               value={search}
               onChangeText={text => {
@@ -417,7 +457,7 @@ export default function Clients() {
           {loading && (
             <View style={styles.centreState}>
               <ActivityIndicator size='large' color='#1677FF' />
-              <Text style={styles.stateText}>Loading clients...</Text>
+              <Text style={styles.stateText}>Loading users...</Text>
             </View>
           )}
 
@@ -434,7 +474,7 @@ export default function Clients() {
               </Text>
               <TouchableOpacity
                 style={styles.retryBtn}
-                onPress={fetchClients}
+                onPress={fetchData}
                 activeOpacity={0.8}
               >
                 <Text style={styles.retryText}>Retry</Text>
@@ -442,10 +482,9 @@ export default function Clients() {
             </View>
           )}
 
-          {/* Table Container with Sticky Side Column */}
+          {/* Table */}
           {!loading && !error && (
             <View style={styles.tableOuter}>
-              {/* Scrollable Data Columns */}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator
@@ -454,11 +493,10 @@ export default function Clients() {
                 style={{ flex: 1 }}
               >
                 <View>
-                  {/* Header row */}
                   <View style={[styles.tableRow, styles.tableHeaderRow]}>
                     {[
-                      ['name', COL.name, 'Name'],
-                      ['code', COL.code, 'Client Code'],
+                      ['nameEmail', COL.nameEmail, 'Username'],
+                      ['group', COL.group, 'Group'],
                       ['status', COL.status, 'Status'],
                       ['createdOn', COL.createdOn, 'Created On'],
                       ['createdBy', COL.createdBy, 'Created By'],
@@ -468,18 +506,21 @@ export default function Clients() {
                       </View>
                     ))}
                   </View>
+
                   {paginated.length === 0 ? (
                     <View style={styles.emptyState}>
                       <MaterialCommunityIcons
-                        name='office-building-outline'
+                        name='account-search-outline'
                         size={40}
                         color='#C4CDD5'
                       />
-                      <Text style={styles.emptyText}>No clients found</Text>
+                      <Text style={styles.emptyText}>
+                        {search ? 'No users found' : 'No users yet'}
+                      </Text>
                     </View>
                   ) : (
                     paginated.map((item, index) => (
-                      <View key={item.clientId ?? index}>
+                      <View key={item.userId ?? index}>
                         <TableRow item={item} />
                         {index < paginated.length - 1 && (
                           <View style={styles.separator} />
@@ -492,16 +533,13 @@ export default function Clients() {
 
               {/* Sticky Action Column */}
               <View>
-                {/* Blank Header Cell */}
                 <View style={[styles.tableRow, styles.tableHeaderRow]}>
                   <View style={[styles.cell, { width: COL.actions }]}>
                     <Text style={styles.colLabel}>Action</Text>
                   </View>
                 </View>
-
-                {/* Sticky Action Rows */}
                 {paginated.map((item, index) => (
-                  <View key={item.clientId ?? index}>
+                  <View key={item.userId ?? index}>
                     <View
                       style={[
                         styles.tableRow,
@@ -601,23 +639,23 @@ export default function Clients() {
         visible={actionSheet}
         onClose={() => setActionSheet(false)}
         onEdit={handleEditFromSheet}
-        onViewUsers={handleViewUsersFromSheet}
         onDelete={handleDeleteFromSheet}
       />
 
       <DeleteDialog
         visible={deleteDialog}
-        clientName={activeClient?.clientName ?? ''}
+        userName={activeUser?.userName ?? ''}
         onCancel={() => setDeleteDialog(false)}
         onConfirm={handleConfirmDelete}
         loading={deleteLoading}
       />
 
-      <ClientFormModal
+      <ClientUserFormModal
         open={formOpen}
         onClose={handleFormClose}
         onSubmit={handleFormSubmit}
-        client={editClient}
+        client={client}
+        user={editUser}
       />
     </View>
   );
@@ -628,12 +666,31 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
 
-  // Header — locked standard
+  breadcrumb: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  backBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#DDE1E6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  breadcrumbLink: { fontSize: 13, color: '#637381' },
+  breadcrumbMid: { fontSize: 13, color: '#637381', maxWidth: 140 },
+  breadcrumbCurrent: { fontSize: 13, fontWeight: '600', color: '#1C252E' },
+
   pageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 4,
   },
   headerSide: { flex: 1 },
   pageTitle: {
@@ -651,8 +708,18 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
   },
+  subtitle: {
+    fontSize: 13,
+    color: '#637381',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  subtitleCode: {
+    fontFamily: 'monospace',
+    fontWeight: '700',
+    color: '#1C252E',
+  },
 
-  // Card
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -666,7 +733,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
 
-  // Search
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -680,7 +746,6 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 14, color: '#1C252E', padding: 0 },
 
-  // States
   centreState: { alignItems: 'center', paddingVertical: 40, gap: 10 },
   stateText: { fontSize: 14, color: '#637381', textAlign: 'center' },
   retryBtn: {
@@ -691,7 +756,6 @@ const styles = StyleSheet.create({
     borderColor: '#1677FF',
   },
   retryText: { color: '#1677FF', fontSize: 13, fontWeight: '600' },
-
   tableOuter: { flexDirection: 'row', marginHorizontal: -16 },
   tableHeaderRow: {
     backgroundColor: '#F4F6F8',
@@ -712,10 +776,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
+
   divider: { height: 1, backgroundColor: '#F0F2F5', marginVertical: 6 },
   separator: { height: 1, backgroundColor: '#F6F7F8' },
 
-  // Row cells
   avatar: {
     width: 34,
     height: 34,
@@ -727,23 +791,12 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   avatarText: { fontSize: 13, fontWeight: '600', color: '#4B5563' },
-  nameText: { fontSize: 13, fontWeight: '600', color: '#1C252E', flex: 1 },
-  codeBadge: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 5,
-  },
-  codeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#374151',
-    fontFamily: Platform?.OS === 'ios' ? 'Courier' : 'monospace',
-  },
+  nameBlock: { flex: 1 },
+  nameText: { fontSize: 13, fontWeight: '600', color: '#1C252E' },
+  emailText: { fontSize: 11, color: '#637381', marginTop: 2 },
+  metaText: { fontSize: 12, color: '#637381' },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   badgeText: { fontSize: 11, fontWeight: '600' },
-  metaText: { fontSize: 12, color: '#637381' },
-
   emptyState: {
     alignItems: 'center',
     paddingVertical: 40,
@@ -751,7 +804,6 @@ const styles = StyleSheet.create({
   },
   emptyText: { color: '#919EAB', marginTop: 8, fontSize: 14 },
 
-  // Pagination
   pagination: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -90,6 +90,64 @@ const clients = [
   },
 ];
 
+const clientUsers = [
+  {
+    userId: 101,
+    clientId: 1,
+    userName: 'John Watson',
+    email: 'john.watson@acmecorp.com',
+    status: true,
+    clientUserGroupId: 2,
+    userGroup: { userGroupName: 'User' },
+    createdOn: daysAgo(120),
+    createdBy: { userName: 'System' },
+  },
+  {
+    userId: 102,
+    clientId: 1,
+    userName: 'Emma Clarke',
+    email: 'emma.clarke@acmecorp.com',
+    status: true,
+    clientUserGroupId: 1,
+    userGroup: { userGroupName: 'Admin' },
+    createdOn: daysAgo(200),
+    createdBy: { userName: 'System' },
+  },
+  {
+    userId: 103,
+    clientId: 2,
+    userName: 'Liam Chen',
+    email: 'liam.chen@globex.com',
+    status: true,
+    clientUserGroupId: 2,
+    userGroup: { userGroupName: 'User' },
+    createdOn: daysAgo(80),
+    createdBy: { userName: 'Priya Sharma' },
+  },
+  {
+    userId: 104,
+    clientId: 2,
+    userName: 'Nora Patel',
+    email: 'nora.patel@globex.com',
+    status: false,
+    clientUserGroupId: 2,
+    userGroup: { userGroupName: 'User' },
+    createdOn: daysAgo(60),
+    createdBy: { userName: 'Priya Sharma' },
+  },
+  {
+    userId: 105,
+    clientId: 3,
+    userName: 'Victor Nguyen',
+    email: 'victor.nguyen@initech.com',
+    status: true,
+    clientUserGroupId: 1,
+    userGroup: { userGroupName: 'Admin' },
+    createdOn: daysAgo(150),
+    createdBy: { userName: 'System' },
+  },
+];
+
 const projects = [
   {
     projectId: 1,
@@ -282,6 +340,49 @@ export const MOCK_HANDLERS = {
   'ctpl/master/clients/create': () => ok({}),
   'ctpl/master/clients/update': () => ok({}),
   'ctpl/master/clients/delete': () => ok({}),
+
+  'ctpl/user/client-users': payload => {
+    const list = payload?.clientId
+      ? clientUsers.filter(u => u.clientId === payload.clientId)
+      : clientUsers;
+    return ok(list);
+  },
+  'ctpl/user/client-users/create': payload => {
+    clientUsers.push({
+      userId: Date.now(),
+      clientId: payload.clientId,
+      userName: payload.userName,
+      email: payload.email,
+      status: true,
+      clientUserGroupId: payload.clientUserGroupId,
+      userGroup: {
+        userGroupName: payload.clientUserGroupId === 1 ? 'Admin' : 'User',
+      },
+      createdOn: new Date().toISOString(),
+      createdBy: { userName: 'You' },
+    });
+    return ok({});
+  },
+  'ctpl/user/client-users/update': payload => {
+    const u = clientUsers.find(u => u.userId === payload.userId);
+    if (u) {
+      u.userName = payload.userName ?? u.userName;
+      u.email = payload.email ?? u.email;
+      if (payload.clientUserGroupId !== undefined) {
+        u.clientUserGroupId = payload.clientUserGroupId;
+        u.userGroup = {
+          userGroupName: payload.clientUserGroupId === 1 ? 'Admin' : 'User',
+        };
+      }
+      if (payload.status !== undefined) u.status = payload.status;
+    }
+    return ok({});
+  },
+  'ctpl/user/client-users/delete': payload => {
+    const idx = clientUsers.findIndex(u => u.userId === payload.userId);
+    if (idx !== -1) clientUsers.splice(idx, 1);
+    return ok({});
+  },
 
   'ctpl/master/projects': () => ok(projects),
   'ctpl/master/project/info-list': () => ok(projects),
