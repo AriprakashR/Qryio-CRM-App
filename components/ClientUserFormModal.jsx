@@ -20,11 +20,11 @@ import {
 import { useUser } from '../context/UserContext';
 
 const CLIENT_USER_GROUPS = [
-  { label: 'Admin', value: 1, icon: 'shield-account' },
-  { label: 'User', value: 2, icon: 'account' },
+  { label: 'Admin', value: 166, icon: 'shield-account' },
+  { label: 'User', value: 167, icon: 'account' },
 ];
-const GROUP_USER_ID = 2;
-const INITIAL_ERRORS = { userName: '', email: '', clientUserGroupId: '' };
+const GROUP_USER_ID = 167;
+const INITIAL_ERRORS = { userName: '', email: '', userGroupId: '' };
 
 function validateEmail(email) {
   return /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(email);
@@ -160,15 +160,17 @@ function GroupDropdown({ value, onChange, error, disabled }) {
 }
 
 // ── Main Modal ────────────────────────────────────────────────────────
-export function ClientUserFormModal({ open, onClose, onSubmit, client, user }) {
+// `clientUser` set → edit mode. Group is fixed at creation and can't be
+// changed afterwards (matches the web app — the edit form hides it).
+export function ClientUserFormModal({ open, onClose, onSubmit, client, clientUser }) {
   const { isClientAdmin } = useUser();
-  const isEdit = Boolean(user);
+  const isEdit = Boolean(clientUser);
 
   const getInitialForm = useCallback(
     () => ({
       userName: '',
       email: '',
-      clientUserGroupId: isClientAdmin ? GROUP_USER_ID : '',
+      userGroupId: isClientAdmin ? GROUP_USER_ID : '',
       status: true,
     }),
     [isClientAdmin],
@@ -183,17 +185,17 @@ export function ClientUserFormModal({ open, onClose, onSubmit, client, user }) {
     if (!open) return;
     if (isEdit) {
       setForm({
-        userName: user.userName ?? '',
-        email: user.email ?? '',
-        clientUserGroupId: user.clientUserGroupId ?? '',
-        status: user.status ?? true,
+        userName: clientUser.userName ?? '',
+        email: clientUser.email ?? '',
+        userGroupId: '',
+        status: clientUser.status ?? true,
       });
     } else {
       setForm(getInitialForm());
     }
     setErrors(INITIAL_ERRORS);
     setApiError('');
-  }, [open, isEdit, user, getInitialForm]);
+  }, [open, isEdit, clientUser, getInitialForm]);
 
   const handleChange = useCallback((name, value) => {
     setForm(prev => ({ ...prev, [name]: value }));
@@ -215,13 +217,13 @@ export function ClientUserFormModal({ open, onClose, onSubmit, client, user }) {
       next.email = 'Enter a valid email address.';
       valid = false;
     }
-    if (!form.clientUserGroupId) {
-      next.clientUserGroupId = 'Group is required.';
+    if (!isEdit && !form.userGroupId) {
+      next.userGroupId = 'Group is required.';
       valid = false;
     }
     setErrors(next);
     return valid;
-  }, [form]);
+  }, [form, isEdit]);
 
   const handleSubmit = useCallback(async () => {
     if (!validate()) return;
@@ -231,10 +233,10 @@ export function ClientUserFormModal({ open, onClose, onSubmit, client, user }) {
     try {
       if (isEdit) {
         await updateClientUser({
-          userId: user.userId,
+          clientUserId: clientUser.userId,
           userName: form.userName.trim(),
           email: form.email.trim(),
-          clientUserGroupId: form.clientUserGroupId,
+          clientId: client?.clientId ?? 0,
           status: form.status,
         });
       } else {
@@ -242,7 +244,7 @@ export function ClientUserFormModal({ open, onClose, onSubmit, client, user }) {
           userName: form.userName.trim(),
           email: form.email.trim(),
           clientId: client?.clientId ?? 0,
-          clientUserGroupId: form.clientUserGroupId,
+          userGroupId: Number(form.userGroupId),
         });
       }
       onSubmit?.();
@@ -256,7 +258,7 @@ export function ClientUserFormModal({ open, onClose, onSubmit, client, user }) {
     } finally {
       setLoading(false);
     }
-  }, [form, validate, isEdit, user, client, onSubmit]);
+  }, [form, validate, isEdit, clientUser, client, onSubmit]);
 
   const handleClose = useCallback(() => {
     if (loading) return;
@@ -396,16 +398,18 @@ export function ClientUserFormModal({ open, onClose, onSubmit, client, user }) {
               )}
             </View>
 
-            {/* Group */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Group</Text>
-              <GroupDropdown
-                value={form.clientUserGroupId}
-                onChange={val => handleChange('clientUserGroupId', val)}
-                error={errors.clientUserGroupId}
-                disabled={loading || isClientAdmin}
-              />
-            </View>
+            {/* Group — fixed at creation, can't be changed afterwards */}
+            {!isEdit && (
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Group</Text>
+                <GroupDropdown
+                  value={form.userGroupId}
+                  onChange={val => handleChange('userGroupId', val)}
+                  error={errors.userGroupId}
+                  disabled={loading || isClientAdmin}
+                />
+              </View>
+            )}
           </ScrollView>
 
           <Divider />

@@ -90,6 +90,7 @@ const clients = [
   },
 ];
 
+// Group IDs match the real backend: 166 = Client Admin, 167 = Client User.
 const clientUsers = [
   {
     userId: 101,
@@ -97,8 +98,8 @@ const clientUsers = [
     userName: 'John Watson',
     email: 'john.watson@acmecorp.com',
     status: true,
-    clientUserGroupId: 2,
-    userGroup: { userGroupName: 'User' },
+    userGroupId: 167,
+    userGroup: { userGroupName: 'Client User' },
     createdOn: daysAgo(120),
     createdBy: { userName: 'System' },
   },
@@ -108,8 +109,8 @@ const clientUsers = [
     userName: 'Emma Clarke',
     email: 'emma.clarke@acmecorp.com',
     status: true,
-    clientUserGroupId: 1,
-    userGroup: { userGroupName: 'Admin' },
+    userGroupId: 166,
+    userGroup: { userGroupName: 'Client Admin' },
     createdOn: daysAgo(200),
     createdBy: { userName: 'System' },
   },
@@ -119,8 +120,8 @@ const clientUsers = [
     userName: 'Liam Chen',
     email: 'liam.chen@globex.com',
     status: true,
-    clientUserGroupId: 2,
-    userGroup: { userGroupName: 'User' },
+    userGroupId: 167,
+    userGroup: { userGroupName: 'Client User' },
     createdOn: daysAgo(80),
     createdBy: { userName: 'Priya Sharma' },
   },
@@ -130,8 +131,8 @@ const clientUsers = [
     userName: 'Nora Patel',
     email: 'nora.patel@globex.com',
     status: false,
-    clientUserGroupId: 2,
-    userGroup: { userGroupName: 'User' },
+    userGroupId: 167,
+    userGroup: { userGroupName: 'Client User' },
     createdOn: daysAgo(60),
     createdBy: { userName: 'Priya Sharma' },
   },
@@ -141,8 +142,8 @@ const clientUsers = [
     userName: 'Victor Nguyen',
     email: 'victor.nguyen@initech.com',
     status: true,
-    clientUserGroupId: 1,
-    userGroup: { userGroupName: 'Admin' },
+    userGroupId: 166,
+    userGroup: { userGroupName: 'Client Admin' },
     createdOn: daysAgo(150),
     createdBy: { userName: 'System' },
   },
@@ -333,13 +334,26 @@ export const MOCK_HANDLERS = {
   'ctpl/user/company-users': () => ok(employees),
   'ctpl/user/company-users/create': () => ok({}),
   'ctpl/user/company-users/update': () => ok({}),
-  'ctpl/user/delete': () => ok({}),
+  // "Delete" is a soft-delete everywhere in this app — it flips status to
+  // inactive and the record stays in the table. Shared between company
+  // users and client users.
+  'ctpl/user/delete': payload => {
+    const emp = employees.find(e => e.userId === payload?.userId);
+    if (emp) emp.status = false;
+    const cu = clientUsers.find(u => u.userId === payload?.userId);
+    if (cu) cu.status = false;
+    return ok({});
+  },
 
   'ctpl/master/clients/list': () => ok(clients),
   'ctpl/master/clients/info-list': () => ok(clients),
   'ctpl/master/clients/create': () => ok({}),
   'ctpl/master/clients/update': () => ok({}),
-  'ctpl/master/clients/delete': () => ok({}),
+  'ctpl/master/clients/delete': payload => {
+    const c = clients.find(c => c.clientId === payload?.clientId);
+    if (c) c.status = false;
+    return ok({});
+  },
 
   'ctpl/user/client-users': payload => {
     const list = payload?.clientId
@@ -354,33 +368,23 @@ export const MOCK_HANDLERS = {
       userName: payload.userName,
       email: payload.email,
       status: true,
-      clientUserGroupId: payload.clientUserGroupId,
+      userGroupId: payload.userGroupId,
       userGroup: {
-        userGroupName: payload.clientUserGroupId === 1 ? 'Admin' : 'User',
+        userGroupName: payload.userGroupId === 166 ? 'Client Admin' : 'Client User',
       },
       createdOn: new Date().toISOString(),
       createdBy: { userName: 'You' },
     });
     return ok({});
   },
+  // Group can't be changed after creation — only name/email/status.
   'ctpl/user/client-users/update': payload => {
-    const u = clientUsers.find(u => u.userId === payload.userId);
+    const u = clientUsers.find(u => u.userId === payload.clientUserId);
     if (u) {
       u.userName = payload.userName ?? u.userName;
       u.email = payload.email ?? u.email;
-      if (payload.clientUserGroupId !== undefined) {
-        u.clientUserGroupId = payload.clientUserGroupId;
-        u.userGroup = {
-          userGroupName: payload.clientUserGroupId === 1 ? 'Admin' : 'User',
-        };
-      }
       if (payload.status !== undefined) u.status = payload.status;
     }
-    return ok({});
-  },
-  'ctpl/user/client-users/delete': payload => {
-    const idx = clientUsers.findIndex(u => u.userId === payload.userId);
-    if (idx !== -1) clientUsers.splice(idx, 1);
     return ok({});
   },
 
@@ -388,7 +392,14 @@ export const MOCK_HANDLERS = {
   'ctpl/master/project/info-list': () => ok(projects),
   'ctpl/master/projects/create': () => ok({}),
   'ctpl/master/projects/update': () => ok({}),
-  'ctpl/master/projects/delete': () => ok({}),
+  // Soft-delete, same as clients/users. Mobile's Projects screen already
+  // sends an explicit status (it toggles: reactivate if already inactive,
+  // deactivate otherwise) — honor that, defaulting to deactivate.
+  'ctpl/master/projects/delete': payload => {
+    const p = projects.find(p => p.projectId === payload?.projectId);
+    if (p) p.status = payload?.status ?? false;
+    return ok({});
+  },
   'ctpl/master/component/info-list': () => ok([]),
 
   'ctpl/tickets/user-projects': () => ok(projects),

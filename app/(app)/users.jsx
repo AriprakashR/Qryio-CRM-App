@@ -11,17 +11,16 @@ import {
 import { Text, Menu, Divider } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  getClientsList,
-  getClientUsers,
-  deleteClientUser,
-} from '../../api/clientService';
+import { getClientsList, getClientUsers } from '../../api/clientService';
+import { deleteUser } from '../../api/employeeService';
 import { ClientUserFormModal } from '../../components/ClientUserFormModal';
 import { useUser } from '../../context/UserContext';
 
+// userGroupName comes back as "Client Admin" / "Client User" — strip the
+// "Client " prefix for display, same as the web app.
 const GROUP_COLORS = {
-  Admin: { bg: '#EDE9FE', text: '#7C3AED' },
-  User: { bg: '#DBEAFE', text: '#1D4ED8' },
+  'Client Admin': { bg: '#DBEAFE', text: '#1D4ED8' },
+  'Client User': { bg: '#FEF3C7', text: '#D97706' },
 };
 const STATUS_COLORS = {
   true: { bg: '#DCFCE7', text: '#16A34A', label: 'Active' },
@@ -71,7 +70,7 @@ function TableRow({ item, onAction }) {
       <View style={[styles.cell, { width: COL.group }]}>
         <View style={[styles.badge, { backgroundColor: gc.bg }]}>
           <Text style={[styles.badgeText, { color: gc.text }]}>
-            {groupName || '—'}
+            {groupName.replace('Client ', '') || '—'}
           </Text>
         </View>
       </View>
@@ -233,7 +232,7 @@ function DeleteDialog({ visible, userName, onCancel, onConfirm, loading }) {
 export default function Users() {
   const router = useRouter();
   const { clientId } = useLocalSearchParams();
-  const { isClientAdmin } = useUser();
+  const { user, isClientAdmin } = useUser();
   // Drilled in from the Clients list (Company Admin) vs. reached via the
   // drawer's own "Users" link (Client Admin) — same as web's clientId param.
   const showBreadcrumb = !!clientId;
@@ -255,20 +254,29 @@ export default function Users() {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   // ── Fetch ─────────────────────────────────────────────────────────
+  // Client Admin: resolve to their own client, straight from their profile.
+  // Company Admin drilling in from Clients: look the client up by clientId.
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const clientsRes = await getClientsList();
-      const allClients = clientsRes.data.data ?? [];
-      const targetClient = clientId
-        ? allClients.find(c => String(c.clientId) === String(clientId))
-        : allClients[0];
-      setClient(targetClient ?? null);
+      let targetClient = null;
+      if (isClientAdmin) {
+        targetClient = user?.client ?? null;
+      } else if (clientId) {
+        const clientsRes = await getClientsList();
+        const allClients = clientsRes.data.data ?? [];
+        targetClient =
+          allClients.find(c => String(c.clientId) === String(clientId)) ??
+          null;
+      }
+      setClient(targetClient);
 
       if (targetClient) {
         const usersRes = await getClientUsers({
           clientId: targetClient.clientId,
+          clientCode: targetClient.clientCode,
+          clientName: targetClient.clientName,
         });
         setUsers(usersRes.data.data ?? []);
       } else {
@@ -280,7 +288,7 @@ export default function Users() {
     } finally {
       setLoading(false);
     }
-  }, [clientId]);
+  }, [clientId, isClientAdmin, user]);
 
   useEffect(() => {
     fetchData();
@@ -333,7 +341,12 @@ export default function Users() {
     if (!activeUser) return;
     setDeleteLoading(true);
     try {
-      await deleteClientUser({ userId: activeUser.userId });
+      // Shared "delete user" endpoint — same one Employees uses.
+      await deleteUser({
+        userId: activeUser.userId,
+        email: activeUser.email,
+        userName: activeUser.userName,
+      });
       setDeleteDialog(false);
       setActiveUser(null);
       await fetchData();
@@ -655,7 +668,7 @@ export default function Users() {
         onClose={handleFormClose}
         onSubmit={handleFormSubmit}
         client={client}
-        user={editUser}
+        clientUser={editUser}
       />
     </View>
   );

@@ -54,6 +54,9 @@ const DUMMY_PROFILES = [
       email: 'clientadmin@dummy.com',
       userName: 'Client Admin',
       userGroup: { roles: [{ roleName: 'ROLE_Client_Admin' }] },
+      // Real profiles carry the user's own client — the Users screen
+      // reads this directly instead of guessing which client to show.
+      client: { clientId: 1, clientCode: 'ACME01', clientName: 'Acme Corp' },
     },
   },
   {
@@ -63,6 +66,7 @@ const DUMMY_PROFILES = [
       email: 'clientuser@dummy.com',
       userName: 'Client User',
       userGroup: { roles: [{ roleName: 'ROLE_User' }] },
+      client: { clientId: 1, clientCode: 'ACME01', clientName: 'Acme Corp' },
     },
   },
 ];
